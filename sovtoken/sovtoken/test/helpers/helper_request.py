@@ -1,6 +1,6 @@
 import json
 
-from indy.ledger import build_nym_request
+from indy.ledger import build_nym_request, build_schema_request
 from plenum.common.constants import TXN_TYPE, CURRENT_PROTOCOL_VERSION, GET_TXN, DATA
 from plenum.common.request import Request
 from plenum.common.types import f
@@ -101,8 +101,7 @@ class HelperRequest():
         sdk_wallet=None,
     ):
         """ Builds a nym request. """
-        sdk_wallet = sdk_wallet or self._steward_wallet
-        _, sdk_wallet_did = sdk_wallet
+        sdk_wallet_did = self._find_wallet_did(sdk_wallet)
 
         if not dest:
             (dest, new_verkey) = self._wallet.create_did(
@@ -125,6 +124,27 @@ class HelperRequest():
         request = self._sign_sdk(request, sdk_wallet=sdk_wallet)
 
         return request
+
+    def schema(
+            self,
+            schema_data,
+            sdk_wallet=None
+    ):
+        sdk_wallet_did = self._find_wallet_did(sdk_wallet)
+
+        schema_request_future = build_schema_request(sdk_wallet_did, schema_data)
+
+        schema_request = self._looper.loop.run_until_complete(schema_request_future)
+        request = self._sdk.sdk_json_to_request_object(json.loads(schema_request))
+        request = self._sign_sdk(request, sdk_wallet=sdk_wallet)
+
+        return request
+
+
+    def _find_wallet_did(self, sdk_wallet):
+        sdk_wallet = sdk_wallet or self._steward_wallet
+        _, sdk_wallet_did = sdk_wallet
+        return sdk_wallet_did
 
     def _prepare_outputs(self, outputs):
         return [[address.address, amount] for address, amount in outputs]

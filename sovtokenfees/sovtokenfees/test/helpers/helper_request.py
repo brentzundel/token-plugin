@@ -55,7 +55,19 @@ class HelperRequest(token_helper_request.HelperRequest):
         change = total_inputs - fee_amount
 
         if change > 0 and change_address:
-            outputs = [[change_address, change]]
+            if not isinstance(change_address, list):
+                change_address = [change_address]
+
+            change_part = change // len(change_address)
+
+            if change_part <= 0:
+                raise Exception("Unable to divide {}, {} ways".format(change, len(change_address)))
+
+            change_mod = change % len(change_address)
+            outputs = []
+            for address in change_address:
+                outputs.append([address, change_part+change_mod])
+                change_mod = 0
         else:
             outputs = []
    
